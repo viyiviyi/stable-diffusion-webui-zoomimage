@@ -94,9 +94,13 @@ onUiLoaded(function () {
     touchstart: function (event) {
       event.stopPropagation();
       event.preventDefault();
-      lastX = event.targetTouches[0].pageX - offsetx;
-      lastY = event.targetTouches[0].pageY - offsety;
+      if (!touchStore.tpuchScale) {
+        lastX = event.targetTouches[0].pageX - offsetx;
+        lastY = event.targetTouches[0].pageY - offsety;
+      }
+      touchStore.tpuchScale = false;
       if (event.targetTouches[1]) {
+        touchStore.tpuchScale = true;
         touchStore.last1X = event.targetTouches[0].pageX;
         touchStore.last1Y = event.targetTouches[0].pageY;
         touchStore.last2X = event.targetTouches[1].pageX;
@@ -128,6 +132,9 @@ onUiLoaded(function () {
         scale = touchStore.scale * zoom;
         deltaX *= zoom;
         deltaY *= zoom;
+      } else if (touchStore.tpuchScale) {
+        touchStore.tpuchScale = false;
+        img.style.transition = "transform 0.3s ease";
       }
       offsetx = deltaX;
       offsety = deltaY;
