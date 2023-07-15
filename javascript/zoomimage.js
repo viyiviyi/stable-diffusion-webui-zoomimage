@@ -3,6 +3,9 @@ onUiLoaded(function () {
   imageContainer.style.width = "100%";
   imageContainer.style.height = "100%";
   imageContainer.style.overflow = "hidden";
+  function disableClose(e) {
+    e.stopPropagation();
+  }
   let modalControls = imageContainer.getElementsByClassName("modalControls")[0];
   if (modalControls) {
     modalControls.style.position = "relative";
@@ -33,7 +36,6 @@ onUiLoaded(function () {
     },
     mousedown: function (event) {
       event.stopPropagation();
-      event.preventDefault();
       isDragging = true;
       lastX = event.clientX - offsetx;
       lastY = event.clientY - offsety;
@@ -44,6 +46,7 @@ onUiLoaded(function () {
       event.stopPropagation();
       event.preventDefault();
       if (isDragging) {
+        img.onclick = disableClose;
         let deltaX = event.clientX - lastX;
         let deltaY = event.clientY - lastY;
         offsetx = deltaX;
@@ -54,13 +57,11 @@ onUiLoaded(function () {
     },
     mouseup: function (event) {
       event.stopPropagation();
-      event.preventDefault();
       isDragging = false;
       img.style.cursor = "grab";
     },
     mouseleave: function (event) {
       event.stopPropagation();
-      event.preventDefault();
       isDragging = false;
       img.style.cursor = "grab";
     },
@@ -74,10 +75,12 @@ onUiLoaded(function () {
       offsety = 0;
       touchStore = {};
       img.style.transform = "none";
+      img.onclick = undefined;
     },
     touchcancel: function (event) {
       event.stopPropagation();
       event.preventDefault();
+      img.onclick = undefined;
       img.style.transition = "";
       // 获取手势缩放比例
       let newScale = scale * event.scale;
@@ -88,12 +91,11 @@ onUiLoaded(function () {
     touchend: function (event) {
       // 更新缩放比例
       event.stopPropagation();
-      event.preventDefault();
+      img.onclick = undefined;
       scale = scale * event.scale;
     },
     touchstart: function (event) {
       event.stopPropagation();
-      event.preventDefault();
       if (!touchStore.tpuchScale) {
         lastX = event.targetTouches[0].pageX - offsetx;
         lastY = event.targetTouches[0].pageY - offsety;
@@ -111,6 +113,7 @@ onUiLoaded(function () {
     touchmove: function (event) {
       event.stopPropagation();
       event.preventDefault();
+      img.onclick = disableClose;
       img.style.transition = "";
       let deltaX = event.targetTouches[0].pageX - lastX;
       let deltaY = event.targetTouches[0].pageY - lastY;
@@ -145,9 +148,6 @@ onUiLoaded(function () {
 
   function reloadZoomEvent(new_event) {
     if (!new_event) return;
-    img.onclick = function (e) {
-      e.stopPropagation();
-    };
     imageContainer.removeEventListener("click", event.reset);
     imageContainer.removeEventListener("wheel", event.wheel);
     img.removeEventListener("mousedown", event.mousedown);
