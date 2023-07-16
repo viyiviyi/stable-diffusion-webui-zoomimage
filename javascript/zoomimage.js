@@ -13,32 +13,49 @@ onUiLoaded(function () {
   }
   let img = imageContainer.querySelector("img");
   img.style.width = "auto";
+  img.style.maxWidth = "100%";
+  img.style.height = "auto";
+  img.style.maxHeight = "100%";
   let scale = 1;
   let lastX = 0;
   let lastY = 0;
-  let offsetx = 0;
-  let offsety = 0;
+  let offsetX = 0;
+  let offsetY = 0;
   let isDragging = false;
   let touchStore = {};
   let event = {
     wheel: function (event) {
-      img.style.transition = "transform 0.3s ease";
       event.stopPropagation();
       event.preventDefault();
+      img.style.transition = "transform 0.3s ease";
       let delta = Math.max(-1, Math.min(1, event.wheelDelta || -event.detail));
       let zoomStep = 0.1;
       let zoom = 1 + delta * zoomStep;
       scale *= zoom;
-      lastX *= zoom;
-      lastY *= zoom;
+      //   图片中心坐标
+      let centerX = imageContainer.offsetWidth / 2;
+      let centerY = imageContainer.offsetHeight / 2;
+      //   当前中心坐标
+      let deltaCenterX = centerX + offsetX;
+      let deltaCenterY = centerY + offsetY;
+      //   鼠标位置与中心坐标的差
+      let mouseDistanceX = event.clientX - deltaCenterX;
+      let mouseDistanceY = event.clientY - deltaCenterY;
+      //  以当前位置缩放会产生的距离变化
+      let dX = mouseDistanceX - mouseDistanceX * zoom;
+      let dY = mouseDistanceY - mouseDistanceY * zoom;
+      // 计算缩放后的图片中心偏移
+      offsetX = Math.min(centerX, Math.max(-centerX, offsetX + dX));
+      offsetY = Math.min(centerY, Math.max(-centerY, offsetY + dY));
+
       img.style.transform =
-        "translate(" + offsetx + "px, " + offsety + "px) scale(" + scale + ")";
+        "translate(" + offsetX + "px, " + offsetY + "px) scale(" + scale + ")";
     },
     mousedown: function (event) {
       event.stopPropagation();
       isDragging = true;
-      lastX = event.clientX - offsetx;
-      lastY = event.clientY - offsety;
+      lastX = event.clientX - offsetX;
+      lastY = event.clientY - offsetY;
       img.style.cursor = "grabbing";
     },
     mousemove: function (event) {
@@ -49,8 +66,8 @@ onUiLoaded(function () {
         img.onclick = disableClose;
         let deltaX = event.clientX - lastX;
         let deltaY = event.clientY - lastY;
-        offsetx = deltaX;
-        offsety = deltaY;
+        offsetX = deltaX;
+        offsetY = deltaY;
         img.style.transform =
           "translate(" + deltaX + "px, " + deltaY + "px) scale(" + scale + ")";
       }
@@ -71,8 +88,8 @@ onUiLoaded(function () {
       lastY = 0;
       last2X = 0;
       last2Y = 0;
-      offsetx = 0;
-      offsety = 0;
+      offsetX = 0;
+      offsetY = 0;
       touchStore = {};
       img.style.transform = "none";
       img.onclick = undefined;
@@ -86,19 +103,21 @@ onUiLoaded(function () {
       let newScale = scale * event.scale;
       // 设置img标签的样式，实现缩放效果
       img.style.transform =
-        "translate(" + offsetx + "px, " + offsety + "px) scale(" + scale + ")";
+        "translate(" + offsetX + "px, " + offsetY + "px) scale(" + scale + ")";
     },
     touchend: function (event) {
       // 更新缩放比例
       event.stopPropagation();
       img.onclick = undefined;
-      scale = scale * event.scale;
+      if (!event.targetTouches.length) {
+        touchStore.tpuchScale = false;
+      }
     },
     touchstart: function (event) {
       event.stopPropagation();
       if (!touchStore.tpuchScale) {
-        lastX = event.targetTouches[0].pageX - offsetx;
-        lastY = event.targetTouches[0].pageY - offsety;
+        lastX = event.targetTouches[0].pageX - offsetX;
+        lastY = event.targetTouches[0].pageY - offsetY;
       }
       touchStore.tpuchScale = false;
       if (event.targetTouches[1]) {
@@ -114,9 +133,6 @@ onUiLoaded(function () {
       event.stopPropagation();
       event.preventDefault();
       img.onclick = disableClose;
-      img.style.transition = "";
-      let deltaX = event.targetTouches[0].pageX - lastX;
-      let deltaY = event.targetTouches[0].pageY - lastY;
       if (event.targetTouches[1]) {
         img.style.transition = "transform 0.3s ease";
         touchStore.delta1X = event.targetTouches[0].pageX;
@@ -133,16 +149,48 @@ onUiLoaded(function () {
         );
         let zoom = deltaLen / lastLen;
         scale = touchStore.scale * zoom;
-        deltaX *= zoom;
-        deltaY *= zoom;
-      } else if (touchStore.tpuchScale) {
-        touchStore.tpuchScale = false;
-        img.style.transition = "transform 0.3s ease";
+        //   图片中心坐标
+        let centerX = imageContainer.offsetWidth / 2;
+        let centerY = imageContainer.offsetHeight / 2;
+        //   当前中心坐标
+        let deltaCenterX = centerX + offsetX;
+        let deltaCenterY = centerY + offsetY;
+        //   缩放中心位置与中心坐标的差
+        let mouseDistanceX =
+          touchStore.delta1X +
+          (touchStore.delta2X - touchStore.delta1X) / 2 -
+          deltaCenterX;
+        let mouseDistanceY =
+          touchStore.delta1Y +
+          (touchStore.delta2Y - touchStore.delta1Y) / 2 -
+          deltaCenterY;
+        //  以当前位置缩放会产生的距离变化
+        let dX = mouseDistanceX - mouseDistanceX * zoom;
+        let dY = mouseDistanceY - mouseDistanceY * zoom;
+        // 计算缩放后的图片中心偏移
+        offsetX = Math.min(centerX, Math.max(-centerX, offsetX + dX));
+        offsetY = Math.min(centerY, Math.max(-centerY, offsetY + dY));
+        img.style.transform =
+          "translate(" +
+          offsetX +
+          "px, " +
+          offsetY +
+          "px) scale(" +
+          scale +
+          ")";
+      } else if (!touchStore.tpuchScale) {
+        img.style.transition = "";
+        offsetX = event.targetTouches[0].pageX - lastX;
+        offsetY = event.targetTouches[0].pageY - lastY;
+        img.style.transform =
+          "translate(" +
+          offsetX +
+          "px, " +
+          offsetY +
+          "px) scale(" +
+          scale +
+          ")";
       }
-      offsetx = deltaX;
-      offsety = deltaY;
-      img.style.transform =
-        "translate(" + deltaX + "px, " + deltaY + "px) scale(" + scale + ")";
     },
   };
 
@@ -155,8 +203,9 @@ onUiLoaded(function () {
     img.removeEventListener("mouseup", event.mouseup);
     img.removeEventListener("mouseleave", event.mouseleave);
     // 移动端
-    img.removeEventListener("touchstart", event.touchstart);
-    img.removeEventListener("touchmove", event.touchmove);
+    imageContainer.removeEventListener("touchend", event.touchend);
+    imageContainer.removeEventListener("touchstart", event.touchstart);
+    imageContainer.removeEventListener("touchmove", event.touchmove);
     event = new_event;
 
     imageContainer.addEventListener("click", event.reset);
@@ -166,8 +215,9 @@ onUiLoaded(function () {
     img.addEventListener("mouseup", event.mouseup);
     img.addEventListener("mouseleave", event.mouseleave);
     // 移动端
-    img.addEventListener("touchstart", event.touchstart);
-    img.addEventListener("touchmove", event.touchmove);
+    imageContainer.addEventListener("touchend", event.touchend);
+    imageContainer.addEventListener("touchstart", event.touchstart);
+    imageContainer.addEventListener("touchmove", event.touchmove);
   }
   reloadZoomEvent(event);
 });
