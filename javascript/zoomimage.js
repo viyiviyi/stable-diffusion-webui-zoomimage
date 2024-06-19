@@ -59,10 +59,10 @@ onUiLoaded(function () {
       img.style.cursor = "grabbing";
     },
     mousemove: function (event) {
-      img.style.transition = "";
-      event.stopPropagation();
-      event.preventDefault();
       if (isDragging) {
+        img.style.transition = "";
+        event.stopPropagation();
+        event.preventDefault();
         img.onclick = disableClose;
         let deltaX = event.clientX - lastX;
         let deltaY = event.clientY - lastY;
@@ -214,6 +214,13 @@ onUiLoaded(function () {
     img.addEventListener("mousemove", event.mousemove);
     img.addEventListener("mouseup", event.mouseup);
     img.addEventListener("mouseleave", event.mouseleave);
+    img.ondrag =
+      img.ondragend =
+      img.ondragstart =
+        function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+        };
     // 移动端
     imageContainer.addEventListener("touchend", event.touchend);
     imageContainer.addEventListener("touchstart", event.touchstart);
