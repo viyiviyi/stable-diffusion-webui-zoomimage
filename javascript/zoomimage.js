@@ -6,12 +6,10 @@ onUiLoaded(function () {
   function disableClose(e) {
     e.stopPropagation();
   }
-  let toolDomHeight = 0;
   let modalControls = imageContainer.getElementsByClassName("modalControls")[0];
   if (modalControls) {
     modalControls.style.position = "relative";
     modalControls.style.zIndex = 1;
-    toolDomHeight = modalControls.offsetHeight;
   }
   let img = imageContainer.querySelector("img");
   img.style.width = "auto";
@@ -41,18 +39,23 @@ onUiLoaded(function () {
       scale = Math.max(0.1, scale);
       //   图片中心坐标
       let centerX = imageContainer.offsetWidth / 2;
-      let centerY = (imageContainer.offsetHeight - toolDomHeight) / 2;
+      let centerY = imageContainer.offsetHeight / 2;
+      //   图片中心坐标
       let imgCenterX = offsetX + centerX;
       let imgCenterY = offsetY + centerY;
+      //   缩放后坐标偏移 = 缩放后图片中心坐标 - 页面中心坐标
+      //   缩放后图片中心坐标 = 缩放中心坐标 - 缩放后距离
+      //   缩放后距离 = (缩放前距离 / 之前的缩放比) *之后的缩放比
+      //   缩放前距离 = 缩放中心坐标 - 之前的图片中心坐标
+      //   之前的图片中心坐标 = 页面中心坐标 + 坐标偏移
       offsetX =
-        offsetX -
-        ((event.pageX - (offsetX + centerX)) / lastScale) * (scale - lastScale);
+        event.clientX -
+        ((event.clientX - imgCenterX) / lastScale) * scale -
+        centerX;
       offsetY =
-        offsetY -
-        ((event.pageY - (offsetY + centerY)) / lastScale) * (scale - lastScale);
-      // 计算缩放后的图片中心偏移
-      offsetX = Math.min(centerX, Math.max(-centerX, offsetX));
-      offsetY = Math.min(centerY, Math.max(-centerY, offsetY));
+        event.clientY -
+        ((event.clientY - imgCenterY) / lastScale) * scale -
+        centerY;
       img.style.transform =
         "translate(" + offsetX + "px, " + offsetY + "px) scale(" + scale + ")";
     },
@@ -121,15 +124,15 @@ onUiLoaded(function () {
     touchstart: function (event) {
       event.stopPropagation();
       if (!touchStore.tpuchScale) {
-        lastX = event.targetTouches[0].pageX - offsetX;
-        lastY = event.targetTouches[0].pageY - offsetY;
+        lastX = event.targetTouches[0].clientX - offsetX;
+        lastY = event.targetTouches[0].clientY - offsetY;
       }
       if (event.targetTouches[1]) {
         touchStore.tpuchScale = true;
-        touchStore.last1X = event.targetTouches[0].pageX;
-        touchStore.last1Y = event.targetTouches[0].pageY;
-        touchStore.last2X = event.targetTouches[1].pageX;
-        touchStore.last2Y = event.targetTouches[1].pageY;
+        touchStore.last1X = event.targetTouches[0].clientX;
+        touchStore.last1Y = event.targetTouches[0].clientY;
+        touchStore.last2X = event.targetTouches[1].clientX;
+        touchStore.last2Y = event.targetTouches[1].clientY;
         touchStore.scale = scale;
         lastLen = Math.sqrt(
           Math.pow(touchStore.last2X - touchStore.last1X, 2) +
@@ -142,30 +145,40 @@ onUiLoaded(function () {
       event.preventDefault();
       img.onclick = disableClose;
       if (event.targetTouches[1]) {
+        touchStore.delta1X = event.targetTouches[0].clientX;
+        touchStore.delta1Y = event.targetTouches[0].clientY;
+        touchStore.delta2X = event.targetTouches[1].clientX;
+        touchStore.delta2Y = event.targetTouches[1].clientY;
+        let centerX = imageContainer.offsetWidth / 2;
+        let centerY = imageContainer.offsetHeight / 2;
+        let deltaLen = Math.sqrt(
+          Math.pow(touchStore.delta2X - touchStore.delta1X, 2) +
+            Math.pow(touchStore.delta2Y - touchStore.delta1Y, 2)
+        );
+        let zoom = deltaLen / lastLen;
+        let lastScale = scale;
+        scale = touchStore.scale * zoom;
+        scale = Math.max(0.1, scale);
+        // 当前缩放中心坐标
+        let deltaCenterX =
+          touchStore.delta1X + (touchStore.delta2X - touchStore.delta1X) / 2;
+        let deltaCenterY =
+          touchStore.delta1Y + (touchStore.delta2Y - touchStore.delta1Y) / 2;
+        // 图片中心坐标
+        let imgCenterX = offsetX + centerX;
+        let imgCenterY = offsetY + centerY;
+        // 计算缩放后的图片中心偏移
+        offsetX =
+          deltaCenterX -
+          ((deltaCenterX - imgCenterX) / lastScale) * scale -
+          centerX;
+        offsetY =
+          deltaCenterY -
+          ((deltaCenterY - imgCenterY) / lastScale) * scale -
+          centerY;
         function moveFun() {
           if (Date.now() - moveFunLastExecTime < 5) return;
           img.style.transition = "transform 0.3s ease";
-          touchStore.delta1X = event.targetTouches[0].pageX;
-          touchStore.delta1Y = event.targetTouches[0].pageY;
-          touchStore.delta2X = event.targetTouches[1].pageX;
-          touchStore.delta2Y = event.targetTouches[1].pageY;
-          let centerX = imageContainer.offsetWidth / 2;
-          let centerY = (imageContainer.offsetHeight - toolDomHeight) / 2;
-          let deltaLen = Math.sqrt(
-            Math.pow(touchStore.delta2X - touchStore.delta1X, 2) +
-              Math.pow(touchStore.delta2Y - touchStore.delta1Y, 2)
-          );
-          let zoom = deltaLen / lastLen;
-          scale = touchStore.scale * zoom;
-          scale = Math.max(0.1, scale);
-          //   当前缩放中心坐标
-          let deltaCenterX =
-            touchStore.delta1X + (touchStore.delta2X - touchStore.delta1X) / 2;
-          let deltaCenterY =
-            touchStore.delta1Y + (touchStore.delta2Y - touchStore.delta1Y) / 2;
-          //   // 计算缩放后的图片中心偏移
-          offsetX = Math.min(centerX, Math.max(-centerX, deltaCenterX - lastX));
-          offsetY = Math.min(centerY, Math.max(-centerY, deltaCenterY - lastY));
           img.style.transform =
             "translate(" +
             offsetX +
@@ -186,8 +199,8 @@ onUiLoaded(function () {
         }
       } else if (!touchStore.tpuchScale) {
         img.style.transition = "";
-        offsetX = event.targetTouches[0].pageX - lastX;
-        offsetY = event.targetTouches[0].pageY - lastY;
+        offsetX = event.targetTouches[0].clientX - lastX;
+        offsetY = event.targetTouches[0].clientY - lastY;
         img.style.transform =
           "translate(" +
           offsetX +
